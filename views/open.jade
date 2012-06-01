@@ -1,0 +1,15 @@
+- if (!everyauth.loggedIn)
+  h1 Can you let Gambo use a folder in your Dropbox account?
+  a(href='/auth/dropbox') Authorize now.
+  p Gambo uses a Dropbox folder to store legal Game Boy ROMs and save information.
+- else
+  h1 #{title}
+  h2 #{current_dir}
+  ul#dir_contents
+    - items.forEach(function(item) {
+      li
+        - if(item.is_dir)
+          a(href='/file_browser' + item.path) #{item.path}
+        - else
+          a(href='/gambo?rom=' + encodeURIComponent(item.path)) #{item.path} (#{item.size})
+    - })
