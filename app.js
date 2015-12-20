@@ -15,33 +15,29 @@ RedisStore = require('connect-redis')(express);
 
 var dbox_app = dbox.app({ 'app_key': consumer_key, 'app_secret': consumer_secret });
 
-var usersByDropboxId = {};
-var clientsByDropboxId = {}
+var usersById = {};
+var clientsById = {};
 
 everyauth.dropbox
 	.consumerKey(consumer_key)
 	.consumerSecret(consumer_secret)
 	.findOrCreateUser( function (sess, accessToken, accessSecret, user) {
-		console.log('Adding user: ');
-		console.log(user);
-
-		if (!(user.uid in clientsByDropboxId)) {
+		if (!(user.uid in clientsById)) {
 			user.id = user.uid;
 
-			clientsByDropboxId[user.uid] = dbox_app.createClient({
+			clientsById[user.uid] = dbox_app.createClient({
 				oauth_token_secret: accessSecret,
 				oauth_token: accessToken,
 				uid: user.uid
 			});
 		}
-		return usersByDropboxId[user.uid] || (usersByDropboxId[user.uid] = user);
+		return usersById[user.uid] || (usersById[user.uid] = user);
 	})
 	.redirectPath('/open');
 
 everyauth.everymodule
 	.findUserById( function(uid, callback) {
-		console.log('Looking for user of UID: ' + uid);
-		callback(null, usersByDropboxId[uid]);
+		callback(null, usersById[uid]);
 	});
 
 // Create and configure an Express server.
@@ -70,10 +66,7 @@ app.get('/', function (req, res) {
 app.get('/open(/*)?', function (req, res) {
 	// Fetch target metadata and render the page.
 	if (req.loggedIn) {
-		console.log("User:");
-		console.log(req.user);
-
-		var client = clientsByDropboxId[req.user.uid];
+		var client = clientsById[req.user.uid];
 		client.metadata(req.params[1] || '', {}, function(status, metadata) {
 			res.render('open.jade', {
 				locals: {
@@ -105,13 +98,14 @@ app.get('/rom/:path', function (req, res) {
 
 	if (!path.match(/\.[Ss]?[Gg][Bb][Cc]?$/)) return;
 
-	var client = clientsByDropboxId[req.user.uid];
+	var client = clientsById[req.user.uid];
 
 	client.get(path, function(status, rom, metadata) {
 		res.contentType('application/octet-stream');
 		res.send(new Buffer(rom).toString('base64'));
+		console.log("ROM request made");
 	});
 });
 
-app.listen(3000);
+app.listen(8124);
 console.log('Dropbox browser running on port ' + app.address().port);
